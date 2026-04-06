@@ -998,7 +998,7 @@ async function renderStaticDashboard() {
 
       if (stats.topSites && stats.topSites.length > 0 && topSitesSection) {
         topSitesGrid.innerHTML = stats.topSites.map(site => `
-          <a class="top-site-tile" href="${site.domain.startsWith('http') ? site.domain : 'https://' + site.domain}" target="_blank" rel="noopener">
+          <a class="top-site-tile" href="${site.domain.startsWith('http') ? site.domain : 'https://' + site.domain}" target="_top">
             <div class="top-site-icon">
               <img src="https://www.google.com/s2/favicons?domain=${site.domain}&sz=32" alt="" loading="lazy" onerror="this.style.display='none'">
             </div>
