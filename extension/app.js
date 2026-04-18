@@ -45,6 +45,7 @@ async function fetchOpenTabs() {
       title:    t.title,
       windowId: t.windowId,
       active:   t.active,
+      favIconUrl: t.favIconUrl || '',
       // Flag Tab Out's own pages so we can detect duplicate new tabs
       isTabOut: t.url === newtabUrl || t.url === 'chrome://newtab/',
     }));
@@ -231,6 +232,7 @@ async function saveTabForLater(tab) {
     id:        Date.now().toString(),
     url:       tab.url,
     title:     tab.title,
+    favIconUrl: tab.favIconUrl || '',
     savedAt:   new Date().toISOString(),
     completed: false,
     dismissed: false,
@@ -583,9 +585,57 @@ const FRIENDLY_DOMAINS = {
   'www.huggingface.co':   'Hugging Face',
   'producthunt.com':      'Product Hunt',
   'www.producthunt.com':  'Product Hunt',
-  'xiaohongshu.com':      'RedNote',
-  'www.xiaohongshu.com':  'RedNote',
-  'local-files':          'Local Files',
+  'xiaohongshu.com':      '小红书',
+  'www.xiaohongshu.com':  '小红书',
+  'explore.xiaohongshu.com': '小红书',
+  'douban.com':           '豆瓣',
+  'www.douban.com':       '豆瓣',
+  'movie.douban.com':     '豆瓣电影',
+  'book.douban.com':      '豆瓣读书',
+  'bilibili.com':         '哔哩哔哩',
+  'www.bilibili.com':     '哔哩哔哩',
+  'space.bilibili.com':   '哔哩哔哩',
+  'weibo.com':            '微博',
+  'www.weibo.com':        '微博',
+  's.weibo.com':          '微博',
+  'zhihu.com':            '知乎',
+  'www.zhihu.com':        '知乎',
+  'zhuanlan.zhihu.com':   '知乎',
+  'taobao.com':           '淘宝',
+  'www.taobao.com':       '淘宝',
+  'tmall.com':            '天猫',
+  'www.tmall.com':        '天猫',
+  'jd.com':               '京东',
+  'www.jd.com':           '京东',
+  'item.jd.com':          '京东',
+  'baidu.com':            '百度',
+  'www.baidu.com':        '百度',
+  'pan.baidu.com':        '百度网盘',
+  'tieba.baidu.com':      '百度贴吧',
+  'map.baidu.com':        '百度地图',
+  'tencent.com':          '腾讯',
+  'www.tencent.com':      '腾讯',
+  'qq.com':               '腾讯',
+  'mail.qq.com':          'QQ邮箱',
+  'docs.qq.com':          '腾讯文档',
+  'alipay.com':           '支付宝',
+  'www.alipay.com':       '支付宝',
+  'alibaba.com':          '阿里巴巴',
+  'www.alibaba.com':      '阿里巴巴',
+  'youku.com':            '优酷',
+  'www.youku.com':        '优酷',
+  'v.youku.com':          '优酷',
+  'iqiyi.com':            '爱奇艺',
+  'www.iqiyi.com':        '爱奇艺',
+  'v.qq.com':             '腾讯视频',
+  'netease.com':          '网易',
+  'www.163.com':          '网易',
+  'mail.163.com':         '网易邮箱',
+  'music.163.com':        '网易云音乐',
+  'weiyun.com':           '腾讯微云',
+  'local-files':          '本地文件',
+  'xueqiu.com':            '雪球',
+  'console.volcengine.com':       '火山',
 };
 
 function friendlyDomain(hostname) {
@@ -767,7 +817,7 @@ function buildOverflowChips(hiddenTabs, urlCounts = {}) {
     const safeTitle = label.replace(/"/g, '&quot;');
     let domain = '';
     try { domain = new URL(tab.url).hostname; } catch {}
-    const faviconUrl = domain ? `https://www.google.com/s2/favicons?domain=${domain}&sz=16` : '';
+    const faviconUrl = tab.favIconUrl || '';
     return `<div class="page-chip clickable${chipClass}" data-action="focus-tab" data-tab-url="${safeUrl}" title="${safeTitle}">
       ${faviconUrl ? `<img class="chip-favicon" src="${faviconUrl}" alt="" onerror="this.style.display='none'">` : ''}
       <span class="chip-text">${label}</span>${dupeTag}
@@ -848,7 +898,7 @@ function renderDomainCard(group) {
     const safeTitle = label.replace(/"/g, '&quot;');
     let domain = '';
     try { domain = new URL(tab.url).hostname; } catch {}
-    const faviconUrl = domain ? `https://www.google.com/s2/favicons?domain=${domain}&sz=16` : '';
+    const faviconUrl = tab.favIconUrl || '';
     return `<div class="page-chip clickable${chipClass}" data-action="focus-tab" data-tab-url="${safeUrl}" title="${safeTitle}">
       ${faviconUrl ? `<img class="chip-favicon" src="${faviconUrl}" alt="" onerror="this.style.display='none'">` : ''}
       <span class="chip-text">${label}</span>${dupeTag}
@@ -966,7 +1016,7 @@ async function renderDeferredColumn() {
 function renderDeferredItem(item) {
   let domain = '';
   try { domain = new URL(item.url).hostname.replace(/^www\./, ''); } catch {}
-  const faviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=16`;
+  const faviconUrl = item.favIconUrl || '';
   const ago = timeAgo(item.savedAt);
 
   return `
@@ -974,7 +1024,7 @@ function renderDeferredItem(item) {
       <input type="checkbox" class="deferred-checkbox" data-action="check-deferred" data-deferred-id="${item.id}">
       <div class="deferred-info">
         <a href="${item.url}" target="_blank" rel="noopener" class="deferred-title" title="${(item.title || '').replace(/"/g, '&quot;')}">
-          <img src="${faviconUrl}" alt="" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px" onerror="this.style.display='none'">${item.title || item.url}
+          ${faviconUrl ? `<img src="${faviconUrl}" alt="" style="width:14px;height:14px;vertical-align:-2px;margin-right:4px" onerror="this.style.display='none'">` : ''}${item.title || item.url}
         </a>
         <div class="deferred-meta">
           <span>${domain}</span>
@@ -1069,6 +1119,11 @@ async function renderStaticDashboard() {
 
   // Custom group rules from config.local.js (if any)
   const customGroups = typeof LOCAL_CUSTOM_GROUPS !== 'undefined' ? LOCAL_CUSTOM_GROUPS : [];
+  
+  // Grouping mode: 'hostname' (default) or 'friendly' (group by friendly domain name)
+  const groupByFriendlyDomain = typeof LOCAL_GROUP_BY_FRIENDLY_DOMAIN !== 'undefined' 
+    ? LOCAL_GROUP_BY_FRIENDLY_DOMAIN 
+    : false;
 
   // Check if a URL matches a custom group rule; returns the rule or null
   function matchCustomGroup(url) {
@@ -1111,8 +1166,23 @@ async function renderStaticDashboard() {
       }
       if (!hostname) continue;
 
-      if (!groupMap[hostname]) groupMap[hostname] = { domain: hostname, tabs: [] };
-      groupMap[hostname].tabs.push(tab);
+      // Determine grouping key based on configuration
+      let groupKey;
+      let groupLabel;
+      
+      if (groupByFriendlyDomain) {
+        // Group by friendly domain name (e.g., all Zhihu subdomains → "知乎")
+        const friendly = friendlyDomain(hostname);
+        groupKey = friendly || hostname;
+        groupLabel = friendly || hostname;
+      } else {
+        // Group by exact hostname (default behavior)
+        groupKey = hostname;
+        groupLabel = null; // Will be derived from hostname during rendering
+      }
+      
+      if (!groupMap[groupKey]) groupMap[groupKey] = { domain: groupKey, label: groupLabel, tabs: [] };
+      groupMap[groupKey].tabs.push(tab);
     } catch {
       // Skip malformed URLs
     }
@@ -1130,13 +1200,29 @@ async function renderStaticDashboard() {
     if (landingHostnames.has(domain)) return true;
     return landingSuffixes.some(s => domain.endsWith(s));
   }
+  
+  // For friendly domain grouping, we need to check if any tab's hostname is a landing domain
+  function isLandingGroup(group) {
+    if (group.domain === '__landing-pages__') return true;
+    // If group has a label (friendly domain mode or custom group), check its tabs
+    if (group.label) {
+      return group.tabs.some(tab => {
+        try {
+          const hostname = tab.url.startsWith('file://') ? 'local-files' : new URL(tab.url).hostname;
+          return isLandingDomain(hostname);
+        } catch { return false; }
+      });
+    }
+    return isLandingDomain(group.domain);
+  }
+  
   domainGroups = Object.values(groupMap).sort((a, b) => {
     const aIsLanding = a.domain === '__landing-pages__';
     const bIsLanding = b.domain === '__landing-pages__';
     if (aIsLanding !== bIsLanding) return aIsLanding ? -1 : 1;
 
-    const aIsPriority = isLandingDomain(a.domain);
-    const bIsPriority = isLandingDomain(b.domain);
+    const aIsPriority = isLandingGroup(a);
+    const bIsPriority = isLandingGroup(b);
     if (aIsPriority !== bIsPriority) return aIsPriority ? -1 : 1;
 
     return b.tabs.length - a.tabs.length;

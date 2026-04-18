@@ -218,7 +218,7 @@ header {
 
 /* ---- Mission Cards ---- */
 .missions {
-  columns: 280px;
+  columns: 340px;
   column-gap: 12px;
   margin-bottom: 40px;
 }
@@ -911,7 +911,7 @@ footer { animation: fadeUp 0.5s ease 0.65s both; }
   overflow-y: auto;
 }
 
-/* On narrow screens, stack vertically */
+/* Responsive columns for narrow screens */
 @media (max-width: 800px) {
   .dashboard-columns {
     flex-direction: column;
@@ -919,6 +919,9 @@ footer { animation: fadeUp 0.5s ease 0.65s both; }
   .deferred-column {
     width: 100%;
     position: static;
+  }
+  .missions {
+    columns: 280px;
   }
 }
 
