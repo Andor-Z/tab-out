@@ -15,6 +15,11 @@
 
 'use strict';
 
+// Initialize i18n cache
+if (typeof refreshLanguageCache === 'function') {
+  refreshLanguageCache();
+}
+
 
 /* ----------------------------------------------------------------
    CHROME TABS — Direct API Access
@@ -449,13 +454,16 @@ function showToast(message) {
  *
  * Shows a cheerful "Inbox zero" message when all domain cards are gone.
  */
-function checkAndShowEmptyState() {
+async function checkAndShowEmptyState() {
   const missionsEl = document.getElementById('openTabsMissions');
   if (!missionsEl) return;
 
   const remaining = missionsEl.querySelectorAll('.mission-card:not(.closing)').length;
   if (remaining > 0) return;
 
+  const emptyTitle = await t('emptyInbox');
+  const emptySubtitle = await t('emptyFree');
+  
   missionsEl.innerHTML = `
     <div class="missions-empty-state">
       <div class="empty-checkmark">
@@ -463,13 +471,13 @@ function checkAndShowEmptyState() {
           <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
         </svg>
       </div>
-      <div class="empty-title">Inbox zero, but for tabs.</div>
-      <div class="empty-subtitle">You're free.</div>
+      <div class="empty-title">${emptyTitle}</div>
+      <div class="empty-subtitle">${emptySubtitle}</div>
     </div>
   `;
 
   const countEl = document.getElementById('openTabsSectionCount');
-  if (countEl) countEl.textContent = '0 domains';
+  if (countEl) countEl.textContent = await t('domains', 0);
 }
 
 /**
@@ -478,7 +486,7 @@ function checkAndShowEmptyState() {
  * Converts an ISO date string into a human-friendly relative time.
  * "2026-04-04T10:00:00Z" → "2 hrs ago" or "yesterday"
  */
-function timeAgo(dateStr) {
+async function timeAgo(dateStr) {
   if (!dateStr) return '';
   const then = new Date(dateStr);
   const now  = new Date();
@@ -486,28 +494,29 @@ function timeAgo(dateStr) {
   const diffHours = Math.floor((now - then) / 3600000);
   const diffDays  = Math.floor((now - then) / 86400000);
 
-  if (diffMins < 1)   return 'just now';
-  if (diffMins < 60)  return diffMins + ' min ago';
-  if (diffHours < 24) return diffHours + ' hr' + (diffHours !== 1 ? 's' : '') + ' ago';
-  if (diffDays === 1) return 'yesterday';
-  return diffDays + ' days ago';
+  if (diffMins < 1)   return await t('justNow');
+  if (diffMins < 60)  return await t('minsAgo', diffMins);
+  if (diffHours < 24) return await t('hoursAgo', diffHours);
+  if (diffDays === 1) return await t('yesterday');
+  return await t('daysAgo', diffDays);
 }
 
 /**
  * getGreeting() — "Good morning / afternoon / evening"
  */
-function getGreeting() {
+async function getGreeting() {
   const hour = new Date().getHours();
-  if (hour < 12) return 'Good morning';
-  if (hour < 17) return 'Good afternoon';
-  return 'Good evening';
+  if (hour < 12) return await t('greetingMorning');
+  if (hour < 17) return await t('greetingAfternoon');
+  return await t('greetingEvening');
 }
 
 /**
  * getDateDisplay() — "Friday, April 4, 2026"
  */
-function getDateDisplay() {
-  return new Date().toLocaleDateString('en-US', {
+async function getDateDisplay() {
+  const locale = await t('dateFormat');
+  return new Date().toLocaleDateString(locale, {
     weekday: 'long',
     year:    'numeric',
     month:   'long',
@@ -792,10 +801,14 @@ function checkTabOutDupes() {
   const tabOutTabs = openTabs.filter(t => t.isTabOut);
   const banner  = document.getElementById('tabOutDupeBanner');
   const countEl = document.getElementById('tabOutDupeCount');
+  const bannerText = document.getElementById('tabOutDupeBannerText');
+  const closeBtn = document.getElementById('closeExtrasBtn');
   if (!banner) return;
 
   if (tabOutTabs.length > 1) {
     if (countEl) countEl.textContent = tabOutTabs.length;
+    if (bannerText) bannerText.innerHTML = tSync('tabOutDupeBanner', tabOutTabs.length);
+    if (closeBtn) closeBtn.textContent = tSync('closeExtras');
     banner.style.display = 'flex';
   } else {
     banner.style.display = 'none';
@@ -818,24 +831,28 @@ function buildOverflowChips(hiddenTabs, urlCounts = {}) {
     let domain = '';
     try { domain = new URL(tab.url).hostname; } catch {}
     const faviconUrl = tab.favIconUrl || '';
+    const saveTooltip = tSync('saveForLater');
+    const closeTooltip = tSync('closeThisTab');
     return `<div class="page-chip clickable${chipClass}" data-action="focus-tab" data-tab-url="${safeUrl}" title="${safeTitle}">
       ${faviconUrl ? `<img class="chip-favicon" src="${faviconUrl}" alt="" onerror="this.style.display='none'">` : ''}
       <span class="chip-text">${label}</span>${dupeTag}
       <div class="chip-actions">
-        <button class="chip-action chip-save" data-action="defer-single-tab" data-tab-url="${safeUrl}" data-tab-title="${safeTitle}" title="Save for later">
+        <button class="chip-action chip-save" data-action="defer-single-tab" data-tab-url="${safeUrl}" data-tab-title="${safeTitle}" title="${saveTooltip}">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0 1 11.186 0Z" /></svg>
         </button>
-        <button class="chip-action chip-close" data-action="close-single-tab" data-tab-url="${safeUrl}" title="Close this tab">
+        <button class="chip-action chip-close" data-action="close-single-tab" data-tab-url="${safeUrl}" title="${closeTooltip}">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
         </button>
       </div>
     </div>`;
   }).join('');
 
+  const moreText = tSync('moreTabs', hiddenTabs.length);
+  
   return `
     <div class="page-chips-overflow" style="display:none">${hiddenChips}</div>
     <div class="page-chip page-chip-overflow clickable" data-action="expand-chips">
-      <span class="chip-text">+${hiddenTabs.length} more</span>
+      <span class="chip-text">${moreText}</span>
     </div>`;
 }
 
@@ -850,7 +867,7 @@ function buildOverflowChips(hiddenTabs, urlCounts = {}) {
  * Builds the HTML for one domain group card.
  * group = { domain: string, tabs: [{ url, title, id, windowId, active }] }
  */
-function renderDomainCard(group) {
+async function renderDomainCard(group) {
   const tabs      = group.tabs || [];
   const tabCount  = tabs.length;
   const isLanding = group.domain === '__landing-pages__';
@@ -865,12 +882,12 @@ function renderDomainCard(group) {
 
   const tabBadge = `<span class="open-tabs-badge">
     ${ICONS.tabs}
-    ${tabCount} tab${tabCount !== 1 ? 's' : ''} open
+    ${await t('tabsOpen', tabCount)}
   </span>`;
 
   const dupeBadge = hasDupes
     ? `<span class="open-tabs-badge" style="color:var(--accent-amber);background:rgba(200,113,58,0.08);">
-        ${totalExtras} duplicate${totalExtras !== 1 ? 's' : ''}
+        ${await t('duplicates', totalExtras)}
       </span>`
     : '';
 
@@ -899,14 +916,16 @@ function renderDomainCard(group) {
     let domain = '';
     try { domain = new URL(tab.url).hostname; } catch {}
     const faviconUrl = tab.favIconUrl || '';
+    const saveTooltip = tSync('saveForLater');
+    const closeTooltip = tSync('closeThisTab');
     return `<div class="page-chip clickable${chipClass}" data-action="focus-tab" data-tab-url="${safeUrl}" title="${safeTitle}">
       ${faviconUrl ? `<img class="chip-favicon" src="${faviconUrl}" alt="" onerror="this.style.display='none'">` : ''}
       <span class="chip-text">${label}</span>${dupeTag}
       <div class="chip-actions">
-        <button class="chip-action chip-save" data-action="defer-single-tab" data-tab-url="${safeUrl}" data-tab-title="${safeTitle}" title="Save for later">
+        <button class="chip-action chip-save" data-action="defer-single-tab" data-tab-url="${safeUrl}" data-tab-title="${safeTitle}" title="${saveTooltip}">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0 1 11.186 0Z" /></svg>
         </button>
-        <button class="chip-action chip-close" data-action="close-single-tab" data-tab-url="${safeUrl}" title="Close this tab">
+        <button class="chip-action chip-close" data-action="close-single-tab" data-tab-url="${safeUrl}" title="${closeTooltip}">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
         </button>
       </div>
@@ -916,14 +935,14 @@ function renderDomainCard(group) {
   let actionsHtml = `
     <button class="action-btn close-tabs" data-action="close-domain-tabs" data-domain-id="${stableId}">
       ${ICONS.close}
-      Close all ${tabCount} tab${tabCount !== 1 ? 's' : ''}
+      ${await t('closeDomainTabs', tabCount)}
     </button>`;
 
   if (hasDupes) {
     const dupeUrlsEncoded = dupeUrls.map(([url]) => encodeURIComponent(url)).join(',');
     actionsHtml += `
       <button class="action-btn" data-action="dedup-keep-one" data-dupe-urls="${dupeUrlsEncoded}">
-        Close ${totalExtras} duplicate${totalExtras !== 1 ? 's' : ''}
+        ${await t('closeDuplicates', totalExtras)}
       </button>`;
   }
 
@@ -982,7 +1001,7 @@ async function renderDeferredColumn() {
 
     // Render active checklist items
     if (active.length > 0) {
-      countEl.textContent = `${active.length} item${active.length !== 1 ? 's' : ''}`;
+      countEl.textContent = await t('itemsCount', active.length);
       list.innerHTML = active.map(item => renderDeferredItem(item)).join('');
       list.style.display = 'block';
       empty.style.display = 'none';
@@ -990,6 +1009,7 @@ async function renderDeferredColumn() {
       list.style.display = 'none';
       countEl.textContent = '';
       empty.style.display = 'block';
+      empty.textContent = await t('nothingSaved');
     }
 
     // Render archive section
@@ -1013,11 +1033,12 @@ async function renderDeferredColumn() {
  * Builds HTML for one active checklist item: checkbox, title link,
  * domain, time ago, dismiss button.
  */
-function renderDeferredItem(item) {
+async function renderDeferredItem(item) {
   let domain = '';
   try { domain = new URL(item.url).hostname.replace(/^www\./, ''); } catch {}
   const faviconUrl = item.favIconUrl || '';
-  const ago = timeAgo(item.savedAt);
+  const ago = await timeAgo(item.savedAt);
+  const dismissTooltip = tSync('dismiss');
 
   return `
     <div class="deferred-item" data-deferred-id="${item.id}">
@@ -1031,7 +1052,7 @@ function renderDeferredItem(item) {
           <span>${ago}</span>
         </div>
       </div>
-      <button class="deferred-dismiss" data-action="dismiss-deferred" data-deferred-id="${item.id}" title="Dismiss">
+      <button class="deferred-dismiss" data-action="dismiss-deferred" data-deferred-id="${item.id}" title="${dismissTooltip}">
         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
       </button>
     </div>`;
@@ -1073,8 +1094,28 @@ async function renderStaticDashboard() {
   // --- Header ---
   const greetingEl = document.getElementById('greeting');
   const dateEl     = document.getElementById('dateDisplay');
-  if (greetingEl) greetingEl.textContent = getGreeting();
-  if (dateEl)     dateEl.textContent     = getDateDisplay();
+  if (greetingEl) greetingEl.textContent = await getGreeting();
+  if (dateEl)     dateEl.textContent     = await getDateDisplay();
+  
+  // --- Language selector ---
+  const langSelector = document.getElementById('languageSelector');
+  if (langSelector) {
+    const currentLang = await getLanguage();
+    langSelector.value = currentLang;
+  }
+  
+  // --- Static text elements ---
+  const savedForLaterTitle = document.getElementById('savedForLaterTitle');
+  if (savedForLaterTitle) savedForLaterTitle.textContent = await t('savedForLater');
+  
+  const archiveLabel = document.getElementById('archiveLabel');
+  if (archiveLabel) archiveLabel.textContent = await t('archive');
+  
+  const archiveSearch = document.getElementById('archiveSearch');
+  if (archiveSearch) archiveSearch.placeholder = await t('searchArchive');
+  
+  const openTabsLabel = document.getElementById('openTabsLabel');
+  if (openTabsLabel) openTabsLabel.textContent = await t('tabs');
 
   // --- Fetch tabs ---
   await fetchOpenTabs();
@@ -1235,9 +1276,11 @@ async function renderStaticDashboard() {
   const openTabsSectionTitle = document.getElementById('openTabsSectionTitle');
 
   if (domainGroups.length > 0 && openTabsSection) {
-    if (openTabsSectionTitle) openTabsSectionTitle.textContent = 'Open tabs';
-    openTabsSectionCount.innerHTML = `${domainGroups.length} domain${domainGroups.length !== 1 ? 's' : ''} &nbsp;&middot;&nbsp; <button class="action-btn close-tabs" data-action="close-all-open-tabs" style="font-size:11px;padding:3px 10px;">${ICONS.close} Close all ${realTabs.length} tabs</button>`;
-    openTabsMissionsEl.innerHTML = domainGroups.map(g => renderDomainCard(g)).join('');
+    if (openTabsSectionTitle) openTabsSectionTitle.textContent = await t('rightNow');
+    const domainsText = await t('domains', domainGroups.length);
+    const closeAllText = await t('closeAllTabs', realTabs.length);
+    openTabsSectionCount.innerHTML = `${domainsText} &nbsp;&middot;&nbsp; <button class="action-btn close-tabs" data-action="close-all-open-tabs" style="font-size:11px;padding:3px 10px;">${ICONS.close} ${closeAllText}</button>`;
+    openTabsMissionsEl.innerHTML = (await Promise.all(domainGroups.map(g => renderDomainCard(g)))).join('');
     openTabsSection.style.display = 'block';
   } else if (openTabsSection) {
     openTabsSection.style.display = 'none';
@@ -1284,7 +1327,7 @@ document.addEventListener('click', async (e) => {
       banner.style.opacity = '0';
       setTimeout(() => { banner.style.display = 'none'; banner.style.opacity = '1'; }, 400);
     }
-    showToast('Closed extra Tab Out tabs');
+    showToast(await t('closedExtras'));
     return;
   }
 
@@ -1346,7 +1389,7 @@ document.addEventListener('click', async (e) => {
     const statTabs = document.getElementById('statTabs');
     if (statTabs) statTabs.textContent = openTabs.length;
 
-    showToast('Tab closed');
+    showToast(await t('tabClosed'));
     return;
   }
 
@@ -1362,7 +1405,7 @@ document.addEventListener('click', async (e) => {
       await saveTabForLater({ url: tabUrl, title: tabTitle });
     } catch (err) {
       console.error('[tab-out] Failed to save tab:', err);
-      showToast('Failed to save tab');
+      showToast(await t('failedToSave'));
       return;
     }
 
@@ -1381,7 +1424,7 @@ document.addEventListener('click', async (e) => {
       setTimeout(() => chip.remove(), 200);
     }
 
-    showToast('Saved for later');
+    showToast(await t('savedForLaterToast'));
     await renderDeferredColumn();
     return;
   }
@@ -1455,7 +1498,7 @@ document.addEventListener('click', async (e) => {
     if (idx !== -1) domainGroups.splice(idx, 1);
 
     const groupLabel = group.domain === '__landing-pages__' ? 'Homepages' : (group.label || friendlyDomain(group.domain));
-    showToast(`Closed ${urls.length} tab${urls.length !== 1 ? 's' : ''} from ${groupLabel}`);
+    showToast(await t('closedTabs', urls.length, groupLabel));
 
     const statTabs = document.getElementById('statTabs');
     if (statTabs) statTabs.textContent = openTabs.length;
@@ -1494,7 +1537,7 @@ document.addEventListener('click', async (e) => {
       card.classList.add('has-neutral-bar');
     }
 
-    showToast('Closed duplicates, kept one copy each');
+    showToast(await t('closedDuplicatesToast'));
     return;
   }
 
@@ -1514,8 +1557,17 @@ document.addEventListener('click', async (e) => {
       animateCardOut(c);
     });
 
-    showToast('All tabs closed. Fresh start.');
+    showToast(await t('allTabsClosed'));
     return;
+  }
+});
+
+// ---- Language selector — switch language and re-render ----
+document.addEventListener('change', async (e) => {
+  if (e.target.id === 'languageSelector') {
+    await setLanguage(e.target.value);
+    refreshLanguageCache();
+    await renderDashboard();
   }
 });
 
@@ -1555,7 +1607,7 @@ document.addEventListener('input', async (e) => {
     );
 
     archiveList.innerHTML = results.map(item => renderArchiveItem(item)).join('')
-      || '<div style="font-size:12px;color:var(--muted);padding:8px 0">No results</div>';
+      || `<div style="font-size:12px;color:var(--muted);padding:8px 0">${tSync('noResults')}</div>`;
   } catch (err) {
     console.warn('[tab-out] Archive search failed:', err);
   }

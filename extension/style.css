@@ -81,6 +81,33 @@ header {
   text-transform: uppercase;
 }
 
+/* Language selector */
+.header-right {
+  display: flex;
+  align-items: center;
+}
+
+.language-selector {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  padding: 6px 12px;
+  border: 1px solid var(--warm-gray);
+  border-radius: 6px;
+  background: var(--card-bg);
+  color: var(--ink);
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.language-selector:hover {
+  border-color: var(--accent-amber);
+}
+
+.language-selector:focus {
+  outline: none;
+  border-color: var(--accent-amber);
+}
+
 /* ---- Tab cleanup banner ---- */
 .tab-cleanup-banner {
   background: linear-gradient(135deg, rgba(200, 113, 58, 0.04), rgba(200, 113, 58, 0.09));
